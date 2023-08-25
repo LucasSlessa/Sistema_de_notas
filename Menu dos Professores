@@ -1,0 +1,138 @@
+using MySql.Data.MySqlClient;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace SistemaDeNotas
+{
+    public partial class MenuProfessor : Form
+    {
+        private int IDProfessorLogado;
+        private string stringConexao = "Data Source=127.0.0.1;Port=3306;Database=Projetofaltas;User ID=root;Password=";
+
+        private MySqlConnection conexao;
+
+
+        public MenuProfessor(int idProfessor = 0)
+        {
+            InitializeComponent();
+
+            IDProfessorLogado = idProfessor;
+            conexao = new MySqlConnection(stringConexao);
+
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            FormControleFaltas formControleFaltas = new FormControleFaltas(IDProfessorLogado);
+            formControleFaltas.ShowDialog();
+
+
+
+        }
+
+        private void MenuProfessor_Load(object sender, EventArgs e)
+        {
+
+            using (MySqlConnection conexao = new MySqlConnection(stringConexao))
+            {
+                conexao.Open();
+
+                string consulta = "SELECT nome FROM usuarios WHERE id = @IdUsuario";
+                MySqlCommand comando = new MySqlCommand(consulta, conexao);
+                comando.Parameters.AddWithValue("@IdUsuario", IDProfessorLogado);
+
+                using (MySqlDataReader reader = comando.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        string nomeSecretario = reader.GetString("nome");
+                        label2.Text = nomeSecretario;
+                    }
+                }
+            }
+        }
+
+        private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            this.Close();
+            Form1 form1 = new Form1();
+            form1.Show();
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            CadastroDisciplina cadastroDisciplina = new CadastroDisciplina(IDProfessorLogado);
+            cadastroDisciplina.Show();
+            this.Hide();
+        }
+
+        private void pictureBox1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                string query = @"SELECT a.nome_aluno, d.nome_disciplina, u.nome AS nome_professor, COALESCE(SUM(f.num_faltas), 0) AS total_faltas
+                                FROM alunos a
+                                INNER JOIN alunos_disciplinas ad ON a.id_aluno = ad.aluno_id
+                                INNER JOIN disciplinas d ON ad.disciplina_id = d.id_disciplina
+                                INNER JOIN turmas t ON a.turma = t.ID
+                                INNER JOIN usuarios u ON d.professor_id = u.id
+                                LEFT JOIN faltas f ON a.id_aluno = f.id_aluno AND d.id_disciplina = f.id_disciplina
+                                WHERE u.id = @idProfessor
+                                GROUP BY a.id_aluno, d.id_disciplina, u.nome, a.nome_aluno, d.nome_disciplina
+                                ORDER BY a.nome_aluno";
+
+                // Crie o arquivo CSV
+                string filePath = @"C:\Users\SeuUsuario\Documents\relatorio.csv";
+                StringBuilder sb = new StringBuilder();
+
+                // Cabeçalhos das colunas
+                sb.AppendLine("Aluno,Disciplina,Professor,Total de Faltas");
+
+                using (MySqlConnection conexao = new MySqlConnection(stringConexao))
+                {
+                    using (MySqlCommand comando = new MySqlCommand(query, conexao))
+                    {
+                        comando.Parameters.AddWithValue("@idProfessor", IDProfessorLogado);
+
+                        conexao.Open();
+
+                        using (MySqlDataReader reader = comando.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                string nomeAluno = reader.GetString("nome_aluno");
+                                string nomeDisciplina = reader.GetString("nome_disciplina");
+                                string nomeProfessor = reader.GetString("nome_professor");
+                                int totalFaltas = reader.GetInt32("total_faltas");
+
+                                // Preencha as linhas do arquivo com os dados do DataTable
+                                sb.AppendLine($"{nomeAluno},{nomeDisciplina},{nomeProfessor},{totalFaltas}");
+                            }
+                        }
+
+                        // Salve o arquivo CSV no disco
+                        System.IO.File.WriteAllText(filePath, sb.ToString());
+
+                        MessageBox.Show("O relatório de faltas foi gerado com sucesso.");
+                    }
+                }
+            }
+            catch (MySqlException ex)
+            {
+                MessageBox.Show("Erro ao gerar o relatório de faltas: " + ex.Message);
+            }
+        }
+    }
+}
