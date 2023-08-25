@@ -1,0 +1,153 @@
+using MySql.Data.MySqlClient;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+
+namespace SistemaDeNotas
+{
+    public partial class Cadastro : Form
+    {
+        private string connectionString = "Data Source=127.0.0.1,3306;Initial Catalog=Projetofaltas;User ID=root;Password=";
+
+        private Form1 menuForm;
+        public Cadastro(Form1 form1)
+        {
+            InitializeComponent();
+            menuForm = form1;
+            this.ControlBox = false;
+        }
+
+        private void Cadastro_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            this.Close();
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            string nome = nomeTextBox.Text; 
+            string senha = senhatextBox.Text;
+            string email = $"{nome}@{GetEmailDomain()}";
+
+
+            // Inserir o usuário no banco de dados
+            if (InserirUsuario(nome, senha, email) )
+            {
+               
+                LimparCampos();
+
+                if (email.Contains("professor"))
+                {
+                    String todos = string.Format("Usuario cadastrado com sucesso, Anote suas credencias para realizar o login posteriormente\n" + "email: {1} \n" + "senha: {0}\n", senha, email);
+                    MessageBox.Show(todos);
+                    this.Close();
+                    menuForm.Hide();
+                    // Direcionar para o menu do professor
+                    MenuProfessor professormenu = new MenuProfessor();
+                    professormenu.Show();
+                }
+                else if (email.Contains("secretario"))
+                {
+                    String todos = string.Format("Usuario cadastrado com sucesso, Anote suas credencias para realizar o login posteriormente\n" + "email: {1} \n" + "senha: {0}\n", senha, email);
+                    MessageBox.Show(todos);
+                    this.Close();
+                    menuForm.Hide();
+                    MenuSecretario secretarioMenu = new MenuSecretario();
+                    secretarioMenu.Show();
+                }
+
+                this.Close();
+
+               
+
+
+            }
+            else
+            {
+                
+                MessageBox.Show("Erro ao cadastrar verifique suas credenciais");
+
+
+            }
+        }
+        private bool InserirUsuario(string nome, string senha, string email)
+        {
+            try
+            {
+                using (MySqlConnection connection = new MySqlConnection(connectionString))
+                {
+                    connection.Open();
+
+                    string verificacaoQuery = "SELECT COUNT(*) FROM Usuarios WHERE Nome = @Nome";
+                    MySqlCommand verificacaoCommand = new MySqlCommand(verificacaoQuery, connection);
+                    verificacaoCommand.Parameters.AddWithValue("@Nome", nome);
+                    int count = Convert.ToInt32(verificacaoCommand.ExecuteScalar());
+
+                    if (count > 0)
+                    {
+                        MessageBox.Show("Usuário com esse nome já existe. Escolha um nome diferente.");
+                        return false;
+                    }
+
+                    // Inserir o novo usuário na tabela
+                    string query = "INSERT INTO Usuarios (Nome, Senha, Email) VALUES (@Nome, @Senha, @Email)";
+                    MySqlCommand command = new MySqlCommand(query, connection);
+                    command.Parameters.AddWithValue("@Nome", nome);
+                    command.Parameters.AddWithValue("@Senha", senha);
+                    command.Parameters.AddWithValue("@Email", email);
+                    command.ExecuteNonQuery();
+                    return true;
+
+                    
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return false;
+            }
+        }
+
+        private string GetEmailDomain()
+        {
+            if (checkBoxSecretario.Checked)
+            {
+                return "secretario.com";
+            }
+            else if (checkBoxProfessor.Checked)
+            {
+                return "professor.com";
+            }
+            else
+            {
+
+                return "semselecao.com";
+            }
+        }
+
+        private void LimparCampos()
+        {
+            nomeTextBox.Text = string.Empty;
+            senhatextBox.Text = string.Empty;
+            checkBoxSecretario.Checked = false;
+            checkBoxProfessor.Checked = false;
+        }
+    }
+}
+    
+
+
+        
+    
+
