@@ -1,0 +1,106 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Data;
+using System.Windows.Forms;
+using MySql.Data.MySqlClient;
+
+namespace SistemaDeNotas
+{
+    public partial class Cadastro_turma : Form
+    {
+        private MySqlConnection conexao;
+        private MySqlCommand comando;
+        private MySqlDataAdapter adaptador;
+        private DataTable tabelaUsuarios;
+
+        private MySqlConnection connection;
+
+        public Cadastro_turma()
+        {
+
+            InitializeComponent();
+
+            // Configurar a conexão com o banco de dados MySQL
+            string stringConexao = "Data Source=127.0.0.1,3306;Initial Catalog=Projetofaltas;User ID=root;Password=";
+            conexao = new MySqlConnection(stringConexao);
+
+            // Preencher a combobox com os professores existentes
+            tabelaUsuarios = new DataTable();
+            adaptador = new MySqlDataAdapter("SELECT Nome FROM Usuarios WHERE Email LIKE '%@professor%'", conexao);
+            adaptador.Fill(tabelaUsuarios);
+
+            foreach (DataRow row in tabelaUsuarios.Rows)
+            {
+                comboBoxProfessor.Items.Add(row["Nome"].ToString());
+            }
+        }
+
+        private void label1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+        }
+
+        private void emailTextBox_TextChanged(object sender, EventArgs e)
+        {
+        }
+
+        private void senhaTextBox_TextChanged(object sender, EventArgs e)
+        {
+        }
+
+        private void label2_Click(object sender, EventArgs e)
+        {
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Abrir a conexão com o banco de dados MySQL
+                conexao.Open();
+
+                // Inserir os dados da turma na tabela Turmas
+                string nomeTurma = textBoxNomeTurma.Text;
+                string semestre = textBoxSemestre.Text;
+                string professorResponsavel = comboBoxProfessor.SelectedItem.ToString();
+
+                comando = new MySqlCommand("INSERT INTO Turmas (NomeTurma, Semestre, ProfessorResponsavel) VALUES (@NomeTurma, @Semestre, @ProfessorResponsavel)", conexao);
+                comando.Parameters.AddWithValue("@NomeTurma", nomeTurma);
+                comando.Parameters.AddWithValue("@Semestre", semestre);
+                comando.Parameters.AddWithValue("@ProfessorResponsavel", professorResponsavel);
+                comando.ExecuteNonQuery();
+
+                MessageBox.Show("Turma cadastrada com sucesso!");
+
+                // Limpar os campos após o cadastro
+                textBoxNomeTurma.Text = "";
+                textBoxSemestre.Text = "";
+                comboBoxProfessor.SelectedIndex = -1;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Erro ao cadastrar a turma: " + ex.Message);
+            }
+            finally
+            {
+                // Fechar a conexão com o banco de dados MySQL
+                conexao.Close();
+            }
+        }
+
+        private void Cadastro_turma_Load(object sender, EventArgs e)
+        {
+
+        }
+    }
+}
