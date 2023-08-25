@@ -1,0 +1,85 @@
+using MySql.Data.MySqlClient;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace SistemaDeNotas
+{
+    public partial class CadastroDisciplina : Form
+    {
+
+        private int IDProfessorLogado;
+        private MySqlConnection conexao;
+
+
+
+        private int idProfessorLogado;
+
+        public CadastroDisciplina(int idProfessor)
+        {
+            InitializeComponent();
+            string stringConexao = "Data Source=127.0.0.1;Port=3306;Database=Projetofaltas;User ID=root;Password=";
+            conexao = new MySqlConnection(stringConexao);
+            idProfessorLogado = idProfessor;
+
+        }
+
+        private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            this.Close();
+            MenuProfessor professormenu = new MenuProfessor(idProfessorLogado);
+            professormenu.Show();
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            string nomeDisciplina = txtNomeDisciplina.Text;
+
+            try
+            {
+                conexao.Open();
+
+                string consulta = "INSERT INTO disciplinas (nome_disciplina, professor_id) VALUES (@NomeDisciplina, @IdProfessor)";
+                MySqlCommand comando = new MySqlCommand(consulta, conexao);
+                comando.Parameters.AddWithValue("@NomeDisciplina", nomeDisciplina);
+                comando.Parameters.AddWithValue("@IdProfessor", idProfessorLogado);
+
+                int linhasAfetadas = comando.ExecuteNonQuery();
+
+                if (linhasAfetadas > 0)
+                {
+                    MessageBox.Show("Disciplina cadastrada com sucesso!");
+                    LimparCampos();
+                }
+                else
+                {
+                    MessageBox.Show("Falha ao cadastrar disciplina!");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Erro ao cadastrar disciplina: " + ex.Message);
+            }
+            finally
+            {
+                conexao.Close();
+            }
+        }
+
+        private void LimparCampos()
+        {
+            txtNomeDisciplina.Text = string.Empty;
+        }
+
+        private void CadastroDisciplina_Load(object sender, EventArgs e)
+        {
+
+        }
+    }
+}
