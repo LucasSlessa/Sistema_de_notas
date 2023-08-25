@@ -1,0 +1,224 @@
+    using Microsoft.VisualBasic.Logging;
+    using System;
+    using System.Collections.Generic;
+    using System.ComponentModel;
+    using System.Data;
+    using System.Drawing;
+    using System.Linq;
+    using System.Text;
+    using System.Threading.Tasks;
+    using System.Windows.Forms;
+    using System.Data.SqlClient;
+    using Microsoft.VisualBasic.ApplicationServices;
+    using MySql.Data.MySqlClient;
+
+    namespace SistemaDeNotas
+    {
+        public partial class Login : Form
+        {
+
+
+
+        private string connectionString = "Data Source=127.0.0.1,3306;Initial Catalog=Projetofaltas;User ID=root;Password=";
+        private int idProfessorLogado;
+        private int idSecretarioLogado;
+
+        private Form1 menuForm;
+        public Login(Form1 form1)
+        {
+            InitializeComponent();
+            menuForm = form1;
+            this.ControlBox = false;
+        }
+
+
+
+        private void Login_Load(object sender, EventArgs e)
+            {
+
+
+            }
+
+            private void label2_Click(object sender, EventArgs e)
+            {
+
+            }
+
+            private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+            {
+                this.Close();
+            }
+
+            private void button1_Click(object sender, EventArgs e)
+        {
+            string email = emailTextBox.Text;
+            string senha = senhaTextBox.Text;
+
+            int idUsuario = VerificarCredenciais(email, senha);
+
+            if (idUsuario != -1)
+            {
+                if (email.Contains("@secretario"))
+                {
+                    // É um secretário
+                    idSecretarioLogado = idUsuario;
+
+                    // Verificar se o secretário está cadastrado no sistema
+                    if (VerificarSecretarioCadastrado(idSecretarioLogado))
+                    {
+                        this.Close();
+                        menuForm.Hide();
+
+                        // Direcionar para o menu do secretário
+                        MenuSecretario secretariomenu = new MenuSecretario(idSecretarioLogado);
+                        secretariomenu.Show();
+                        return;
+                    }
+                    else
+                    {
+                        MessageBox.Show("Secretário não cadastrado no sistema.", "Erro de Login", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+                else
+                {
+                    // É um professor
+                    idProfessorLogado = idUsuario;
+
+                    // Verificar se o professor está cadastrado no sistema de faltas
+                    if (VerificarProfessorCadastrado(idProfessorLogado))
+                    {
+                        this.Close();
+                        menuForm.Hide();
+
+                        // Direcionar para o menu do professor
+                        MenuProfessor professormenu = new MenuProfessor(idProfessorLogado);
+                        professormenu.Show();
+                        return;
+                    }
+                    else
+                    {
+                        MessageBox.Show("Professor não cadastrado no sistema de faltas.", "Erro de Login", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("Credenciais incorretas. Por favor, tente novamente.", "Erro de Login", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private int VerificarCredenciais(string email, string senha)
+        {
+            using (MySqlConnection connection = new MySqlConnection(connectionString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    string query = "SELECT id FROM Usuarios WHERE email = @Email AND senha = @Senha";
+                    using (MySqlCommand command = new MySqlCommand(query, connection))
+                    {
+                        command.Parameters.AddWithValue("@Email", email);
+                        command.Parameters.AddWithValue("@Senha", senha);
+
+                        object result = command.ExecuteScalar();
+                        if (result != null)
+                        {
+                            return Convert.ToInt32(result);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Erro ao verificar as credenciais de login: " + ex.Message, "Erro de Login", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+
+            return -1; // Credenciais inválidas
+        }
+
+        private int VerificarCredenciaisSecretario(string email, string senha)
+        {
+            using (MySqlConnection connection = new MySqlConnection(connectionString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    string query = "SELECT id FROM Usuarios WHERE email = @Email AND senha = @Senha";
+                    using (MySqlCommand command = new MySqlCommand(query, connection))
+                    {
+                        command.Parameters.AddWithValue("@Email", email);
+                        command.Parameters.AddWithValue("@Senha", senha);
+
+                        object result = command.ExecuteScalar();
+                        if (result != null)
+                        {
+                            return Convert.ToInt32(result);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Erro ao verificar as credenciais de login do secretário: " + ex.Message, "Erro de Login", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+
+            return -1; // Credenciais inválidas
+        }
+
+        private bool VerificarProfessorCadastrado(int idProfessor)
+        {
+            using (MySqlConnection connection = new MySqlConnection(connectionString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    string query = "SELECT COUNT(*) FROM Usuarios WHERE id = @IdProfessor";
+                    using (MySqlCommand command = new MySqlCommand(query, connection))
+                    {
+                        command.Parameters.AddWithValue("@IdProfessor", idProfessor);
+
+                        int count = Convert.ToInt32(command.ExecuteScalar());
+
+                        return count > 0;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Erro ao verificar se o professor está cadastrado: " + ex.Message, "Erro de Login", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+
+            return false;
+        }
+
+        private bool VerificarSecretarioCadastrado(int idSecretario)
+        {
+            using (MySqlConnection connection = new MySqlConnection(connectionString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    string query = "SELECT COUNT(*) FROM Usuarios WHERE id = @IdSecretario";
+                    using (MySqlCommand command = new MySqlCommand(query, connection))
+                    {
+                        command.Parameters.AddWithValue("@IdSecretario", idSecretario);
+
+                        int count = Convert.ToInt32(command.ExecuteScalar());
+
+                        return count > 0;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Erro ao verificar se o secretário está cadastrado: " + ex.Message, "Erro de Login", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+
+            return false;
+        }
+    }
+}
