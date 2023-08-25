@@ -1,0 +1,59 @@
+using MySql.Data.MySqlClient;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace SistemaDeNotas
+{
+    public partial class Atribuiçãoturmas : Form
+    {
+
+
+        private MySqlConnection conexao;
+        private int idProfessor;
+        public int idProfessorLogado;
+
+
+        public Atribuiçãoturmas(int idProfessor)
+        {
+            InitializeComponent();
+
+
+            // Inicialize a conexão com o banco de dados
+            string conexaoString = "Data Source=127.0.0.1,3306;Initial Catalog=Projetofaltas;User ID=root;Password=";
+            conexao = new MySqlConnection(conexaoString);
+
+            // Obtenha o ID do professor logado
+            idProfessorLogado = idProfessor;
+
+            // Carregue as turmas do professor logado no combobox
+           
+
+        }
+      
+
+        private void label4_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label2_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void Atribuiçãoturmas_Load(object sender, EventArgs e)
+        {
+           
+
+        }
+
+
+    }
+}
