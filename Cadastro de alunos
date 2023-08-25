@@ -1,0 +1,148 @@
+using MySql.Data.MySqlClient;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace SistemaDeNotas
+{
+    public partial class CadastroAluno : Form
+    {
+
+
+        private MySqlConnection conexao;
+        private MySqlCommand comando;
+        private MySqlDataAdapter adaptador;
+        private DataTable tabelaTurmas;
+        private DataTable tabelaDisciplinas;
+
+        public CadastroAluno()
+        {
+            InitializeComponent();
+
+            // Configurar a conexão com o banco de dados MySQL
+            string stringConexao = "Data Source=127.0.0.1;Port=3306;Database=Projetofaltas;User ID=root;Password=";
+            conexao = new MySqlConnection(stringConexao);
+
+            // Preencher a ComboBox com as disciplinas existentes
+            tabelaDisciplinas = new DataTable();
+            adaptador = new MySqlDataAdapter("SELECT id_disciplina, nome_disciplina FROM disciplinas", conexao);
+            adaptador.Fill(tabelaDisciplinas);
+
+            comboBoxDisciplina.DisplayMember = "nome_disciplina";
+            comboBoxDisciplina.ValueMember = "id_disciplina";
+            comboBoxDisciplina.DataSource = tabelaDisciplinas;
+
+            // Preencher a ComboBox com as turmas existentes
+            tabelaTurmas = new DataTable();
+            adaptador = new MySqlDataAdapter("SELECT ID, NomeTurma FROM turmas", conexao);
+            adaptador.Fill(tabelaTurmas);
+
+            comboBoxTurma.DisplayMember = "NomeTurma";
+            comboBoxTurma.ValueMember = "ID";
+            comboBoxTurma.DataSource = tabelaTurmas;
+        }
+
+        private void label4_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void comboBoxProfessor_SelectedIndexChanged(object sender, EventArgs e)
+        {
+        }
+
+        private void label3_Click(object sender, EventArgs e)
+        {
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+
+            try
+            {
+                // Abrir a conexão com o banco de dados MySQL
+                conexao.Open();
+
+                // Inserir os dados do aluno na tabela Alunos
+                string nomeAluno = textBoxNomeAluno.Text;
+                string matricula = textBoxMatricula.Text;
+
+                comando = new MySqlCommand("INSERT INTO alunos (nome_aluno, matricula, turma) VALUES (@NomeAluno, @Matricula, @TurmaID)", conexao);
+                comando.Parameters.AddWithValue("@NomeAluno", nomeAluno);
+                comando.Parameters.AddWithValue("@Matricula", matricula);
+                comando.Parameters.AddWithValue("@TurmaID", comboBoxTurma.SelectedValue);
+                comando.ExecuteNonQuery();
+
+                // Obter o ID do aluno inserido
+                int idAluno = Convert.ToInt32(comando.LastInsertedId);
+
+                // Obter o ID da disciplina selecionada
+                int idDisciplina = Convert.ToInt32(comboBoxDisciplina.SelectedValue);
+
+                // Relacionar o aluno com a disciplina na tabela alunos_disciplinas
+                comando = new MySqlCommand("INSERT INTO alunos_disciplinas (aluno_id, disciplina_id) VALUES (@AlunoID, @DisciplinaID)", conexao);
+                comando.Parameters.AddWithValue("@AlunoID", idAluno);
+                comando.Parameters.AddWithValue("@DisciplinaID", idDisciplina);
+                comando.ExecuteNonQuery();
+
+                MessageBox.Show("Aluno cadastrado com sucesso!");
+
+                // Limpar os campos após o cadastro
+                textBoxNomeAluno.Text = "";
+                textBoxMatricula.Text = "";
+                comboBoxDisciplina.SelectedIndex = -1;
+                comboBoxTurma.SelectedIndex = -1;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Erro ao cadastrar o aluno: " + ex.Message);
+            }
+            finally
+            {
+                // Fechar a conexão com o banco de dados MySQL
+                conexao.Close();
+            }
+            this.Close();   
+        }
+        private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+        }
+
+        private void textBoxNomeTurma_TextChanged(object sender, EventArgs e)
+        {
+        }
+
+        private void textBoxSemestre_TextChanged(object sender, EventArgs e)
+        {
+        }
+
+        private void label2_Click(object sender, EventArgs e)
+        {
+        }
+
+        private void label1_Click(object sender, EventArgs e)
+        {
+        }
+
+        private void CadastroAluno_Load(object sender, EventArgs e)
+        {
+
+
+            // Preencher a ComboBox com as disciplinas existentes
+            DataTable tabelaDisciplinas = new DataTable();
+            adaptador = new MySqlDataAdapter("SELECT id_disciplina, nome_disciplina FROM Disciplinas", conexao);
+            adaptador.Fill(tabelaDisciplinas);
+
+            comboBoxDisciplina.DisplayMember = "nome_disciplina";
+            comboBoxDisciplina.ValueMember = "id_disciplina";
+            comboBoxDisciplina.DataSource = tabelaDisciplinas;
+
+        }
+    }
+}
