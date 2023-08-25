@@ -1,0 +1,54 @@
+abra o programa em seu visual studio ajuste a conexão com seu banco de dados e insira os seguintes codigos na sua consulta:?
+
+
+CREATE TABLE alunos (
+    id_aluno INT AUTO_INCREMENT,
+    nome_aluno VARCHAR(100),
+    turma INT,
+    PRIMARY KEY (id_aluno),
+    FOREIGN KEY (turma) REFERENCES turmas (ID)
+);
+
+
+CREATE TABLE disciplinas (
+    id_disciplina INT AUTO_INCREMENT,
+    nome_disciplina VARCHAR(100),
+    professor_id INT,
+    PRIMARY KEY (id_disciplina),
+    FOREIGN KEY (professor_id) REFERENCES usuarios (id)
+);
+
+
+CREATE TABLE turmas (
+    ID INT AUTO_INCREMENT,
+    nome_turma VARCHAR(100),
+    PRIMARY KEY (ID)
+);
+
+
+CREATE TABLE usuarios (
+    id INT AUTO_INCREMENT,
+    nome VARCHAR(100),
+    PRIMARY KEY (id)
+);
+
+
+CREATE TABLE alunos_disciplinas (
+    aluno_id INT,
+    disciplina_id INT,
+    FOREIGN KEY (aluno_id) REFERENCES alunos (id_aluno),
+    FOREIGN KEY (disciplina_id) REFERENCES disciplinas (id_disciplina)
+);
+
+
+CREATE TABLE faltas (
+    id_falta INT AUTO_INCREMENT,
+    id_aluno INT,
+    id_disciplina INT,
+    num_faltas INT,
+    PRIMARY KEY (id_falta),
+    FOREIGN KEY (id_aluno) REFERENCES alunos (id_aluno),
+    FOREIGN KEY (id_disciplina) REFERENCES disciplinas (id_disciplina)
+);
+
+
