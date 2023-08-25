@@ -1,0 +1,641 @@
+using MySql.Data.MySqlClient;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+
+namespace SistemaDeNotas
+{
+
+
+
+    public partial class FormControleFaltas : Form
+    {
+        private Dictionary<int, int> faltasPorAluno = new Dictionary<int, int>();
+        private int IDProfessorLogado;
+        private MySqlConnection conexao;
+        private string stringConexao = "Data Source=127.0.0.1,3306;Initial Catalog=Projetofaltas;User ID=root;Password=";
+        private DateTime dataAtual;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        public FormControleFaltas(int idProfessor)
+        {
+            InitializeComponent();
+            comboBoxDisciplinas.SelectedIndexChanged += (sender, e) => CarregarAlunos();
+            conexao = new MySqlConnection(stringConexao);
+            IDProfessorLogado = idProfessor;
+            CarregarDisciplinas();
+        }
+
+
+
+
+
+
+
+        private void FormControleFaltas_Load(object sender, EventArgs e)
+        {
+        }
+
+
+
+
+
+
+
+
+
+
+        private void FormControleFaltas_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            conexao.Dispose();
+        }
+
+
+
+
+
+
+
+
+
+
+        private void CarregarDisciplinas()
+        {
+            try
+            {
+                string query = "SELECT d.id_disciplina, d.nome_disciplina " +
+                               "FROM disciplinas d " +
+                               "INNER JOIN usuarios u ON d.professor_id = u.id " +
+                               "WHERE u.id = @idProfessor";
+
+                MySqlCommand comando = new MySqlCommand(query, conexao);
+                comando.Parameters.AddWithValue("@idProfessor", IDProfessorLogado);
+
+                DataTable dt = new DataTable();
+                conexao.Open();
+                dt.Load(comando.ExecuteReader());
+                conexao.Close();
+
+                comboBoxDisciplinas.DisplayMember = "nome_disciplina";
+                comboBoxDisciplinas.ValueMember = "id_disciplina";
+                comboBoxDisciplinas.DataSource = dt;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Erro ao carregar as disciplinas: " + ex.Message);
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+        private List<Aluno> ObterAlunosPorDisciplina(int idDisciplina)
+        {
+
+
+            List<Aluno> alunos = new List<Aluno>();
+
+            using (MySqlConnection conexao = new MySqlConnection(stringConexao))
+            {
+                string query = "SELECT a.id_aluno, a.nome_aluno, a.matricula " +
+                               "FROM alunos a " +
+                               "INNER JOIN alunos_disciplinas ad ON a.id_aluno = ad.aluno_id " +
+                               "WHERE ad.disciplina_id = @idDisciplina";
+                using (MySqlCommand comando = new MySqlCommand(query, conexao))
+                {
+                    comando.Parameters.AddWithValue("@idDisciplina", idDisciplina);
+                    conexao.Open();
+                    using (MySqlDataReader reader = comando.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            Aluno aluno = new Aluno();
+                            aluno.Id = Convert.ToInt32(reader["id_aluno"]);
+                            aluno.Matricula = reader["matricula"].ToString();
+                            aluno.Nome = reader["nome_aluno"].ToString();
+                            alunos.Add(aluno);
+                        }
+                    }
+                    conexao.Close();
+                }
+            }
+
+            return alunos;
+        }
+
+
+
+
+
+
+        private void CarregarAlunos()
+        {
+
+            int idDisciplina = Convert.ToInt32(comboBoxDisciplinas.SelectedValue);
+            List<Aluno> alunos = ObterAlunosPorDisciplina(Convert.ToInt32(comboBoxDisciplinas.SelectedValue));
+            PreencherDataGridView(dataGridViewAlunos, alunos);
+
+
+        }
+
+
+
+
+
+
+
+
+
+
+        private void btnSalvarFaltas_Click(object sender, EventArgs e)
+        {
+
+        }
+
+
+
+
+
+
+        private void comboBoxDisciplinas_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            CarregarAlunos();
+
+
+        }
+
+        public class Aluno
+        {
+            public int Id { get; set; }
+            public string Matricula { get; set; }
+            public string Nome { get; set; }
+        }
+
+
+
+
+
+
+
+
+
+
+
+        public void PreencherDataGridView(DataGridView dataGridView, List<Aluno> alunos)
+        {// Limpa o DataGridView
+            dataGridView.Rows.Clear();
+            dataGridView.Columns.Clear();
+
+            // Cria as colunas
+            dataGridView.Columns.Add("Id", "ID");
+            dataGridView.Columns.Add("Matricula", "Matrícula");
+            dataGridView.Columns.Add("Nome", "Nome");
+
+            // Adiciona os alunos ao DataGridView
+            foreach (var aluno in alunos)
+            {
+                // Adiciona uma nova linha
+                int rowIndex = dataGridView.Rows.Add();
+
+                // Define os valores nas células
+                dataGridView.Rows[rowIndex].Cells["Id"].Value = aluno.Id;
+                dataGridView.Rows[rowIndex].Cells["Matricula"].Value = aluno.Matricula;
+                dataGridView.Rows[rowIndex].Cells["Nome"].Value = aluno.Nome;
+            }
+
+            // Adicionar as colunas de checkboxes no DataGridView
+            int totalFaltas = 4; // Ajuste esse valor conforme necessário
+            for (int i = 0; i < totalFaltas; i++)
+            {
+                string checkBoxColumnName = "Falta" + (i + 1);
+
+                DataGridViewCheckBoxColumn checkBoxColumn = new DataGridViewCheckBoxColumn();
+                checkBoxColumn.Name = checkBoxColumnName;
+                checkBoxColumn.HeaderText = "Falta " + (i + 1);
+                checkBoxColumn.DataPropertyName = checkBoxColumnName;
+
+                dataGridView.Columns.Add(checkBoxColumn);
+            }
+
+            // Registre os eventos necessários para tratar as mudanças nas checkboxes
+            dataGridView.CellValueChanged += dataGridViewAlunos_CellValueChanged;
+            dataGridView.CurrentCellDirtyStateChanged += dataGridViewAlunos_CurrentCellDirtyStateChanged;
+
+        }
+
+
+
+
+
+
+
+
+
+
+        private void dataGridViewAlunos_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex >= 0 && e.ColumnIndex >= 2)
+            {
+                if (dataGridViewAlunos.Columns[e.ColumnIndex] is DataGridViewCheckBoxColumn)
+                {
+                    dataGridViewAlunos.EndEdit();
+                    dataGridViewAlunos.CommitEdit(DataGridViewDataErrorContexts.Commit);
+
+                    int idAluno = 0;
+                    if (int.TryParse(dataGridViewAlunos.Rows[e.RowIndex].Cells["Id"].Value.ToString(), out int alunoValue))
+                    {
+                        idAluno = alunoValue;
+                    }
+                    else
+                    {
+                        // Lida com o caso em que a célula "Id" não contém um valor válidodata_falta 
+                        // Você pode exibir uma mensagem de erro ou tomar outra ação apropriada aqui
+                        return;
+                    }
+
+                    int idDisciplina = Convert.ToInt32(comboBoxDisciplinas.SelectedValue);
+                    int numFaltas = 0;
+
+                    for (int i = 2; i < dataGridViewAlunos.Columns.Count; i++)
+                    {
+                        string checkBoxColumnName = dataGridViewAlunos.Columns[i].Name;
+                        if (dataGridViewAlunos.Columns[i] is DataGridViewCheckBoxColumn &&
+                            dataGridViewAlunos.Rows[e.RowIndex].Cells[checkBoxColumnName].Value != null)
+                        {
+                            bool isChecked = Convert.ToBoolean(dataGridViewAlunos.Rows[e.RowIndex].Cells[checkBoxColumnName].Value);
+                            if (isChecked)
+                            {
+                                numFaltas++;
+                            }
+                        }
+                    }
+
+                    // Atualize o número de faltas no banco de dados ou faça outras ações necessárias aqui
+
+                    // Armazena o número de faltas no dicionário
+                    faltasPorAluno[idAluno] = numFaltas;
+                }
+            }
+        }
+
+
+
+
+
+
+
+
+
+        private void dataGridViewAlunos_CellValueChanged(object sender, DataGridViewCellEventArgs e)
+        {
+
+
+            try
+            {
+                if (e.RowIndex >= 0 && e.ColumnIndex >= 2)
+                {
+                    int idAluno = Convert.ToInt32(dataGridViewAlunos.Rows[e.RowIndex].Cells["Id"].Value);
+                    int idDisciplina = Convert.ToInt32(comboBoxDisciplinas.SelectedValue);
+                    int numFaltas = 0;
+
+                    for (int i = 2; i < dataGridViewAlunos.Columns.Count; i++)
+                    {
+                        string checkBoxColumnName = dataGridViewAlunos.Columns[i].Name;
+
+                        if (dataGridViewAlunos.Columns[i] is DataGridViewCheckBoxColumn &&
+                            dataGridViewAlunos.Rows[e.RowIndex].Cells[checkBoxColumnName].Value != null)
+                        {
+                            bool isChecked = Convert.ToBoolean(dataGridViewAlunos.Rows[e.RowIndex].Cells[checkBoxColumnName].Value);
+
+                            if (isChecked)
+                            {
+                                numFaltas++;
+                            }
+                        }
+                    }
+
+                    DateTime dataFalta = dataAtual.Date;
+
+                    // Verificar se já existe um registro de falta para o aluno e disciplina na data atual
+                    bool registroExistente = VerificarRegistroExistente(idAluno, idDisciplina, dataFalta);
+
+                    if (registroExistente)
+                    {
+                        // Atualizar o número de faltas do registro existente
+                        AtualizarNumeroFaltasRegistro(idAluno, idDisciplina, dataFalta, numFaltas);
+                    }
+                    else
+                    {
+                        // Inserir um novo registro de falta
+                        InserirRegistroFalta(idAluno, idDisciplina, dataFalta, numFaltas);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Erro ao salvar as faltas: " + ex.Message);
+            }
+
+        }
+
+
+        private bool VerificarRegistroExistente(int idAluno, int idDisciplina, DateTime dataFalta)
+        {
+            string query = "SELECT COUNT(*) FROM presencas WHERE id_aluno = @idAluno AND id_disciplina = @idDisciplina AND data_falta = @dataFalta";
+
+            using (MySqlConnection conexao = new MySqlConnection(stringConexao))
+            {
+                using (MySqlCommand comando = new MySqlCommand(query, conexao))
+                {
+                    comando.Parameters.AddWithValue("@idAluno", idAluno);
+                    comando.Parameters.AddWithValue("@idDisciplina", idDisciplina);
+                    comando.Parameters.AddWithValue("@dataFalta", dataFalta);
+
+                    conexao.Open();
+                    int count = Convert.ToInt32(comando.ExecuteScalar());
+                    conexao.Close();
+
+                    return count > 0;
+                }
+            }
+        }
+
+        private void AtualizarNumeroFaltasRegistro(int idAluno, int idDisciplina, DateTime dataFalta, int numFaltas)
+        {
+            string query = "UPDATE presencas SET num_faltas = @numFaltas WHERE id_aluno = @idAluno AND id_disciplina = @idDisciplina AND data_falta = @dataFalta";
+
+            using (MySqlConnection conexao = new MySqlConnection(stringConexao))
+            {
+                using (MySqlCommand comando = new MySqlCommand(query, conexao))
+                {
+                    comando.Parameters.AddWithValue("@numFaltas", numFaltas);
+                    comando.Parameters.AddWithValue("@idAluno", idAluno);
+                    comando.Parameters.AddWithValue("@idDisciplina", idDisciplina);
+                    comando.Parameters.AddWithValue("@dataFalta", dataFalta);
+
+                    conexao.Open();
+                    comando.ExecuteNonQuery();
+                    conexao.Close();
+                }
+            }
+        }
+
+        private void AtualizarRegistroFalta(int idAluno, int idDisciplina, DateTime novaDataFalta, int numFaltas)
+        {
+            // Adicione essa linha para depurar os valores de ID
+            Console.WriteLine($"idAluno: {idAluno}, idDisciplina: {idDisciplina}");
+
+            string query = "UPDATE presencas SET data_falta = @novaDataFalta, num_faltas = @numFaltas " +
+                           "WHERE id_aluno = @idAluno AND id_disciplina = @idDisciplina AND data_falta = @dataFalta";
+
+            using (MySqlConnection conexao = new MySqlConnection(stringConexao))
+            {
+                using (MySqlCommand comando = new MySqlCommand(query, conexao))
+                {
+                    comando.Parameters.AddWithValue("@novaDataFalta", novaDataFalta);
+                    comando.Parameters.AddWithValue("@numFaltas", numFaltas);
+                    comando.Parameters.AddWithValue("@idAluno", idAluno);
+                    comando.Parameters.AddWithValue("@idDisciplina", idDisciplina);
+                    comando.Parameters.AddWithValue("@dataFalta", dataAtual.Date);
+
+                    conexao.Open();
+                    comando.ExecuteNonQuery();
+                    conexao.Close();
+                }
+            }
+        }
+
+
+
+
+        private void InserirRegistroFalta(int idAluno, int idDisciplina, DateTime dataFalta, int numFaltas)
+        {
+            string query = "INSERT INTO presencas (id_aluno, id_disciplina, data_falta, num_faltas) " +
+                           "VALUES (@idAluno, @idDisciplina, @dataFalta, @numFaltas)";
+
+            using (MySqlConnection conexao = new MySqlConnection(stringConexao))
+            {
+                using (MySqlCommand comando = new MySqlCommand(query, conexao))
+                {
+                    comando.Parameters.AddWithValue("@idAluno", idAluno);
+                    comando.Parameters.AddWithValue("@idDisciplina", idDisciplina);
+                    comando.Parameters.AddWithValue("@dataFalta", dataFalta);
+                    comando.Parameters.AddWithValue("@numFaltas", numFaltas);
+
+                    conexao.Open();
+                    comando.ExecuteNonQuery();
+                    conexao.Close();
+                }
+            }
+        }
+
+
+
+
+
+
+
+        private void dataGridViewAlunos_CurrentCellDirtyStateChanged(object sender, EventArgs e)
+        {
+            if (dataGridViewAlunos.IsCurrentCellDirty)
+            {
+                dataGridViewAlunos.CommitEdit(DataGridViewDataErrorContexts.Commit);
+            }
+        }
+
+        private void dateTimePickerDataFalta_ValueChanged(object sender, EventArgs e)
+        {
+            // Obtém a nova data selecionada
+            DateTime novaDataFalta = dateTimePickerDataFalta.Value.Date;
+
+            // Obtém o ID da disciplina selecionada
+            int idDisciplina = Convert.ToInt32(comboBoxDisciplinas.SelectedValue);
+
+            // Itera sobre os registros de faltas existentes para atualizá-los com a nova data
+            foreach (DataGridViewRow row in dataGridViewAlunos.Rows)
+            {
+                if (row.Cells["Id"].Value != null)
+                {
+                    int idAluno = Convert.ToInt32(row.Cells["Id"].Value);
+                    int numFaltas = 0;
+
+                    for (int i = 2; i < row.Cells.Count; i++)
+                    {
+                        if (row.Cells[i] is DataGridViewCheckBoxCell checkBoxCell)
+                        {
+                            bool isChecked = Convert.ToBoolean(checkBoxCell.Value);
+                            if (isChecked)
+                            {
+                                numFaltas++;
+                            }
+                        }
+                    }
+
+                    // Atualiza o registro de falta existente para a nova data
+                    AtualizarRegistroFalta(idAluno, idDisciplina, novaDataFalta, numFaltas);
+                }
+            }
+            LimparCheckboxes();
+        }
+
+        private void LimparCheckboxes()
+        {
+            foreach (DataGridViewRow row in dataGridViewAlunos.Rows)
+            { 
+                foreach (DataGridViewCell cell in row.Cells)
+                {
+                    if (cell is DataGridViewCheckBoxCell checkboxCell)
+                    {
+                        checkboxCell.Value = false;
+                    }
+                }
+            }
+        }
+
+
+
+
+
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
+public class DatePickerForm : Form
+{
+    public DateTime SelectedDate { get; private set; }
+
+    private DateTimePicker datePicker;
+    private Button btnOK;
+
+    public DatePickerForm()
+    {
+        InitializeComponents();
+    }
+
+    private void InitializeComponents()
+    {
+        // Configurar o formulário
+        this.Text = "Selecione a data";
+        this.FormBorderStyle = FormBorderStyle.FixedDialog;
+        this.StartPosition = FormStartPosition.CenterParent;
+
+        // Configurar o seletor de data
+        datePicker = new DateTimePicker();
+        datePicker.Format = DateTimePickerFormat.Short;
+        datePicker.Dock = DockStyle.Top;
+
+        // Configurar o botão OK
+        btnOK = new Button();
+        btnOK.Text = "OK";
+        btnOK.Dock = DockStyle.Bottom;
+        btnOK.DialogResult = DialogResult.OK;
+        btnOK.Click += BtnOK_Click;
+
+        // Adicionar os controles ao formulário
+        this.Controls.Add(datePicker);
+        this.Controls.Add(btnOK);
+    }
+
+    private void BtnOK_Click(object sender, EventArgs e)
+    {
+        SelectedDate = datePicker.Value;
+    }
+}
+
+public static class PromptDialog
+{
+    public static string ShowDialog(string text, string caption)
+    {
+        Form prompt = new Form()
+        {
+            Width = 400,
+            Height = 150,
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            Text = caption,
+            StartPosition = FormStartPosition.CenterScreen
+        };
+        Label textLabel = new Label() { Left = 50, Top = 20, Text = text, Width = 300 };
+        TextBox textBox = new TextBox() { Left = 50, Top = 50, Width = 300 };
+        Button confirmation = new Button() { Text = "OK", Left = 250, Width = 100, Top = 70, DialogResult = DialogResult.OK };
+        confirmation.Click += (sender, e) => { prompt.Close(); };
+        prompt.Controls.Add(textBox);
+        prompt.Controls.Add(confirmation);
+        prompt.Controls.Add(textLabel);
+        prompt.AcceptButton = confirmation;
+
+        return prompt.ShowDialog() == DialogResult.OK ? textBox.Text : "";
+    }
+}
